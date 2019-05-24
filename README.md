@@ -30,3 +30,8 @@ UUID
  
 Run `UbirchClient` which sends one message to Cumulocity and a UPP of the data to
 the configured UBIRCH backend.
+
+```
+java -jar target/ubirch-client-java-1.0.0-SNAPSHOT-jar-with-dependencies.jar
+
+```

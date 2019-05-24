@@ -9,8 +9,6 @@ import com.ubirch.crypto.utils.Curve;
 import com.ubirch.protocol.Protocol;
 import com.ubirch.protocol.ProtocolException;
 import com.ubirch.protocol.ProtocolMessage;
-import com.ubirch.protocol.codec.MsgPackProtocolDecoder;
-import com.ubirch.protocol.codec.MsgPackProtocolEncoder;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpResponse;
@@ -21,7 +19,6 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -146,8 +143,8 @@ public class UbirchClient {
             HttpPost postRequest = new HttpPost("https://niomon." + ENV + ".ubirch.com");
             // we need to force authentication here, httpclient4 will not send it by it's own
             String auth = Base64.getEncoder()
-                .encodeToString((credentials.getUserName()+":"+credentials.getPassword()).getBytes());
-            postRequest.setHeader("Authorization", "Basic "+auth);
+                .encodeToString((credentials.getUserName() + ":" + credentials.getPassword()).getBytes());
+            postRequest.setHeader("Authorization", "Basic " + auth);
             postRequest.setEntity(new ByteArrayEntity(upp));
             HttpResponse response = client.execute(postRequest);
 
@@ -184,5 +181,8 @@ public class UbirchClient {
         // set device's hardware information (change to something you'd like to see)
         client.publish("s/us", ("110," + clientUUID.toString() + ",ubirch java example client,v1.0").getBytes(), 2, false);
         return client;
+    }
+
+    private UbirchClient() {
     }
 }
