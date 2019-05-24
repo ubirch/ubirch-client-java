@@ -1,7 +1,7 @@
 #! /bin/bash
 
-if [ "$1"x == ""x ]; then
-    echo "use device id as second argument"
+if [[ "$1"x == ""x || "$2"x == ""x ]]; then
+    echo "usage: $0 <uuid> <bootstrap password>"
     exit -1
 fi
 
