@@ -6,6 +6,8 @@ A Java example how to create a device, register keys and send data.
 
 ## Creating a new device in Cumulocity
 
+> If you'd like to try, you don't have to do this part. Contact us with a UUID and we will provide you with a set of credentials to access the UBIRCH API. 
+
 1. create a UUID (`uuidgen`)
 2. in Cumulocity, register a new device using that UUID
 3. run the script `create_device_credentials.sh <PWD> <UUID>` using the bootstrap password
@@ -16,14 +18,15 @@ A Java example how to create a device, register keys and send data.
 
 Set up the environment variables required:
 
-
-* `ENV` - (`dev`, `demo`, `prod`)
-* `SERVER_UUID` - the corresponding backend UUID
+* `UBIRCH_ENV` - (**`dev`**, `demo`, `prod`)
+* `AUTH_USER` - the user name from above
+* `AUTH_PASS` - the password from above
 * `CLIENT_UUID` - the uuid created above
-* `SERVER_PUBKEY` - base64 encoded public key
 * `CLIENT_KEY` - base64 encoded signing key (Ed25519)
-* `C8Y_USER` - the user name from above
-* `C8Y_PASS` - the password from above
+----
+* `SERVER_UUID` - (**optional**) the corresponding backend 
+* `SERVER_PUBKEY` - (**optional**) base64 encoded public key
+UUID
  
 Run `UbirchClient` which sends one message to Cumulocity and a UPP of the data to
 the configured UBIRCH backend.

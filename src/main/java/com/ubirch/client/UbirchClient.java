@@ -9,6 +9,7 @@ import com.ubirch.crypto.utils.Curve;
 import com.ubirch.protocol.Protocol;
 import com.ubirch.protocol.ProtocolException;
 import com.ubirch.protocol.ProtocolMessage;
+import com.ubirch.protocol.codec.MsgPackProtocolDecoder;
 import com.ubirch.protocol.codec.MsgPackProtocolEncoder;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
@@ -20,6 +21,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -40,19 +42,21 @@ import java.util.*;
 public class UbirchClient {
 
     public static void main(String[] args) {
+        System.out.println("Simple UBIRCH Client");
         Map<String, String> envVars = System.getenv();
 
         // ===== COLLECT DATA REQUIRED ===========================================================
         String ENV = envVars.getOrDefault("UBIRCH_ENV", "dev");
-        UUID serverUUID = UUID.fromString(envVars.get("SERVER_UUID"));       // server UUID (for checking responses)
-        UUID clientUUID = UUID.fromString(envVars.get("CLIENT_UUID"));       // client UUID (this clients ID)
-        byte[] serverKeyBytes = Base64.getDecoder().decode(envVars.get("SERVER_PUBKEY"));
+        UUID serverUUID = UUID.fromString(envVars.getOrDefault("SERVER_UUID", "9d3c78ff-22f3-4441-a5d1-85c636d486ff"));
+        UUID clientUUID = UUID.fromString(envVars.get("CLIENT_UUID"));
+        byte[] serverKeyBytes = Base64.getDecoder().decode(envVars.getOrDefault("SERVER_PUBKEY", "okA7krya3TZbPNEv8SDQIGR/hOppg/mLxMh+D0vozWY="));
         byte[] clientKeyBytes = Base64.getDecoder().decode(envVars.get("CLIENT_KEY"));
-        String c8yTenant = envVars.getOrDefault("C8Y_TENANT", "ubirch");
-        String c8yUser = envVars.get("C8Y_USER");
-        String c8yPass = envVars.get("C8Y_PASS");
+        String authUser = envVars.get("AUTH_USER");
+        String authPass = envVars.get("AUTH_PASS");
 
         // ===== DECODE AND SET UP KEYS =========================================================
+        // Keys should be created and stored in a KeyStore for optimal security
+
         PubKey serverKey = null;    // server public key for verification of responses
         try {
             serverKey = GeneratorKeyFactory.getPubKey(serverKeyBytes, Curve.Ed25519);
@@ -69,27 +73,27 @@ public class UbirchClient {
             System.exit(-1);
         }
 
-        // MQTT connection options
         final MqttConnectOptions options = new MqttConnectOptions();
-        options.setUserName(c8yTenant + "/" + c8yUser);
-        options.setPassword(c8yPass.toCharArray());
+        options.setUserName("ubirch/" + authUser);
+        options.setPassword(authPass.toCharArray());
 
         // create an ISO8601 DateFormat (for Cumulocity)
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
         df.setTimeZone(TimeZone.getTimeZone("UTC"));
-        System.out.println(df.format(System.currentTimeMillis()));
 
         // create cumulocity client and ubirch protocol
         try {
             CredentialsProvider provider = new BasicCredentialsProvider();
-            UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(c8yUser, c8yPass);
+            UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(authUser, authPass);
             provider.setCredentials(AuthScope.ANY, credentials);
             final HttpClient client = HttpClientBuilder.create()
                 .setDefaultCredentialsProvider(provider)
                 .build();
 
-            Protocol protocol = new SimpleProtocolImpl(clientUUID, clientKey, serverUUID, serverKey);
+            // this needs to be fixed, the json key reg requires the json to be signed w/o hashing
+            SimpleProtocolImpl protocol = new SimpleProtocolImpl(clientUUID, clientKey, serverUUID, serverKey);
 
+            System.out.println("Registering public key ...");
             // register this key
             Map<String, Object> info = new HashMap<>();
             long now = System.currentTimeMillis();
@@ -104,7 +108,7 @@ public class UbirchClient {
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
             byte[] infoPacket = mapper.writeValueAsString(info).getBytes(StandardCharsets.UTF_8);
-            byte[] signature = protocol.sign(clientUUID, infoPacket, 0, infoPacket.length);
+            byte[] signature = protocol.sign(clientUUID, infoPacket);
             Map<String, Object> registration = new HashMap<>();
             registration.put("pubKeyInfo", info);
             registration.put("signature", signature);
@@ -116,15 +120,12 @@ public class UbirchClient {
             regRequest.setEntity(new StringEntity(mapper.writeValueAsString(registration)));
             HttpResponse regResponse = client.execute(regRequest);
 
-            System.out.println(regResponse.getStatusLine().getStatusCode());
-            ByteArrayOutputStream regBaos = new ByteArrayOutputStream();
-            regResponse.getEntity().writeTo(regBaos);
-
-            System.out.println(new String(regBaos.toByteArray()));
+            System.out.println("REGISTER: " + regResponse.getStatusLine().getStatusCode());
 
             // ===========================================================================================
             final MqttClient c8yClient = getC8yClient(clientUUID, options);
 
+            System.out.println("Sending measurement data ...");
             // create a new data value and send it
             int temp = (int) (Math.random() * 10 + 10);
             long ts = System.currentTimeMillis();
@@ -134,32 +135,44 @@ public class UbirchClient {
             System.out.println("Sending temperature measurement (" + temp + "º) ...");
             c8yClient.publish("s/us", new MqttMessage(("211," + c8yMessage).getBytes()));
 
+            // ===========================================================================================
+            System.out.println("Sending UBIRCH Protocol Packet (UPP) ...");
             // send UPP to ubirch
             byte[] hash = MessageDigest.getInstance("SHA-512").digest((c8yMessage + "," + clientUUID.toString()).getBytes());
             ProtocolMessage pm = new ProtocolMessage(ProtocolMessage.SIGNED, clientUUID, 0x00, hash);
-            byte[] upp = MsgPackProtocolEncoder.getEncoder().encode(pm, protocol);
-            System.out.println(Hex.encodeHexString(upp));
+            byte[] upp = protocol.encodeSign(pm, Protocol.Format.MSGPACK);
+            System.out.println("REQUEST: UPP(" + Hex.encodeHexString(upp) + ")");
 
-            HttpPost postRequest = new HttpPost("https://niomon." + ENV + ".ubirch.com/");
+            HttpPost postRequest = new HttpPost("https://niomon." + ENV + ".ubirch.com");
+            // we need to force authentication here, httpclient4 will not send it by it's own
+            String auth = Base64.getEncoder()
+                .encodeToString((credentials.getUserName()+":"+credentials.getPassword()).getBytes());
+            postRequest.setHeader("Authorization", "Basic "+auth);
             postRequest.setEntity(new ByteArrayEntity(upp));
             HttpResponse response = client.execute(postRequest);
 
             System.out.println(response.getStatusLine().getStatusCode());
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             response.getEntity().writeTo(baos);
+            byte[] responseUPP = baos.toByteArray();
+            System.out.println("RESPONSE: UPP(" + Hex.encodeHexString(responseUPP) + ")");
 
-            System.out.println(Hex.encodeHexString(baos.toByteArray()));
+            System.out.println("Decoded and verified server response:");
+            System.out.println(protocol.decodeVerify(responseUPP));
 
         } catch (MqttException | NoSuchAlgorithmException e) {
             System.err.println("error sending or connecting: " + e.getMessage());
             System.exit(-1);
         } catch (ProtocolException | SignatureException | InvalidKeyException e) {
+            e.printStackTrace();
             System.err.println("UPP encoding or signature error: " + e.getMessage());
             System.exit(-1);
         } catch (IOException | DecoderException e) {
             System.err.println("can't contact ubirch servers: " + e.getMessage());
             System.exit(-1);
         }
+
+        System.exit(0);
     }
 
     private static MqttClient getC8yClient(UUID clientUUID, MqttConnectOptions options) throws MqttException {

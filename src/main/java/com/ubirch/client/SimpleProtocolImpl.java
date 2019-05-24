@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.security.*;
 import java.util.UUID;
 
+@SuppressWarnings("WeakerAccess")
 public class SimpleProtocolImpl extends Protocol {
     private UUID serverUUID;
     private UUID clientUUID;
@@ -47,29 +48,40 @@ public class SimpleProtocolImpl extends Protocol {
         }
     }
 
-    @Override
-    public byte[] sign(UUID uuid, byte[] data, int offset, int len) throws SignatureException, InvalidKeyException {
-        if (uuid == clientUUID) {
-            try {
-                MessageDigest digest = MessageDigest.getInstance("SHA-512", BouncyCastleProvider.PROVIDER_NAME);
-                digest.update(data, offset, len);
-                lastSignature = clientKey.sign(digest.digest());
-                // here would be a good place to store the last generated signature before returning
-                return lastSignature;
-            } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
-                throw new SignatureException(e);
-            }
+    /**
+     * This method is here, because of a little glitch in our backend that requires us to send
+     * key registration messages as JSON, which does not use the message hash as the base for the
+     * signature operation, but signs the rendered json directly.
+     *
+     * TODO: fix the key server to accept UPPv2 and remove this
+     */
+    public byte[] sign(UUID uuid, byte[] data) throws SignatureException, InvalidKeyException {
+        if (uuid.equals(clientUUID)) {
+            lastSignature = clientKey.sign(data);
+            // here would be a good place to store the last generated signature before returning
+            return lastSignature;
         }
         throw new InvalidKeyException(String.format("unknown uuid: %s", uuid.toString()));
     }
 
     @Override
+    public byte[] sign(UUID uuid, byte[] data, int offset, int len) throws SignatureException, InvalidKeyException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-512", BouncyCastleProvider.PROVIDER_NAME);
+            digest.update(data, offset, len);
+            return sign(uuid, digest.digest());
+        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+            throw new SignatureException(e);
+        }
+    }
+
+    @Override
     public boolean verify(UUID uuid, byte[] data, int offset, int len, byte[] signature) throws SignatureException, InvalidKeyException {
-        if (uuid == serverUUID) {
+        if (uuid.equals(serverUUID)) {
             try {
                 MessageDigest digest = MessageDigest.getInstance("SHA-512");
                 digest.update(data, offset, len);
-                serverKey.verify(digest.digest(), signature);
+                return serverKey.verify(digest.digest(), signature);
             } catch (NoSuchAlgorithmException | IOException e) {
                 throw new SignatureException(e);
             }
