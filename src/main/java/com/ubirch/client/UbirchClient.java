@@ -176,6 +176,7 @@ public class UbirchClient {
         System.exit(0);
     }
 
+    // region CUMULOCITY
     private static MqttClient getC8yClient(UUID clientUUID, MqttConnectOptions options) throws MqttException {
         MqttClient client;
         client = new MqttClient("tcp://mqtt.cumulocity.com", clientUUID.toString(), null);
@@ -186,6 +187,7 @@ public class UbirchClient {
         client.publish("s/us", ("110," + clientUUID.toString() + ",ubirch java example client,v1.0").getBytes(), 2, false);
         return client;
     }
+    // endregion CUMULOCITY
 
     private UbirchClient() {
     }
