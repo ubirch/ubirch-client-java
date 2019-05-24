@@ -70,9 +70,11 @@ public class UbirchClient {
             System.exit(-1);
         }
 
+        // region CUMULOCITY
         final MqttConnectOptions options = new MqttConnectOptions();
         options.setUserName("ubirch/" + authUser);
         options.setPassword(authPass.toCharArray());
+        // endregion CUMULOCITY
 
         // create an ISO8601 DateFormat (for Cumulocity)
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
@@ -120,6 +122,7 @@ public class UbirchClient {
             System.out.println("REGISTER: " + regResponse.getStatusLine().getStatusCode());
 
             // ===========================================================================================
+            // region CUMULOCITY
             final MqttClient c8yClient = getC8yClient(clientUUID, options);
 
             System.out.println("Sending measurement data ...");
@@ -131,6 +134,7 @@ public class UbirchClient {
             String c8yMessage = +temp + "," + df.format(ts);
             System.out.println("Sending temperature measurement (" + temp + "º) ...");
             c8yClient.publish("s/us", new MqttMessage(("211," + c8yMessage).getBytes()));
+            // endregion CUMULOCITY
 
             // ===========================================================================================
             System.out.println("Sending UBIRCH Protocol Packet (UPP) ...");
