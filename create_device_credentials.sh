@@ -23,7 +23,6 @@ while (true); do
         id=$(echo $result | jq -r .id)
         echo "ID  : $id"
         auth=$(echo $result | jq -r '(.username + ":" + .password)')
-        time=$(date --utc +%FT%T.%3NZ)
         #echo "AUTH: $auth"
         curl -f --silent -XPOST -u "$auth" \
             -H 'Content-Type: application/vnd.com.nsn.cumulocity.managedObject+json' \
