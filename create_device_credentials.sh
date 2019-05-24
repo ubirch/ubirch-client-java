@@ -20,15 +20,18 @@ while (true); do
     if [[ "$?" == "0" ]]; then
         echo "Device has been registered!"
         echo $result
-        id=$(echo $result | jq -r .id)
-        echo "ID  : $id"
         auth=$(echo $result | jq -r '(.username + ":" + .password)')
-        #echo "AUTH: $auth"
-        curl -f --silent -XPOST -u "$auth" \
+        id=$(curl --silent -XPOST -u "$auth" \
             -H 'Content-Type: application/vnd.com.nsn.cumulocity.managedObject+json' \
             -H 'Accept: application/vnd.com.nsn.cumulocity.managedObject+json' \
             --data "{\"name\":\"$1\",\"type\":\"TESTDEVICE\",\"c8y_IsDevice\":{}}" \
-             https://ubirch.cumulocity.com/inventory/managedObjects | jq -r .name
+             https://ubirch.cumulocity.com/inventory/managedObjects | jq -r .id)
+        echo $id
+        curl --silent -XPOST -u "$auth" \
+            -H 'Content-Type: application/vnd.com.nsn.cumulocity.externalId+json' \
+            -H 'Accept: application/vnd.com.nsn.cumulocity.externalId+json' \
+            --data "{\"type\":\"c8y_Serial\",\"externalId\":\"$1\"}" \
+             https://ubirch.cumulocity.com/identity/globalIds/$id/externalIds
         exit
     fi
     echo -n "."
