@@ -2,6 +2,10 @@
 
 A Java example how to create a device, register keys and send data.
 
+## sending data
+
+[Here](HOWTO.md) you find a short description of how to send data.
+
 **WORK IN PROGRESS**
 
 ## Creating a new device in Cumulocity
@@ -35,3 +39,4 @@ the configured UBIRCH backend.
 java -jar target/ubirch-client-java-1.0.0-SNAPSHOT-jar-with-dependencies.jar
 
 ```
+
