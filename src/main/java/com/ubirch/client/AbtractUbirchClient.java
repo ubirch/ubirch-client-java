@@ -94,8 +94,8 @@ abstract class AbtractUbirchClient {
         info.put("algorithm", "ECC_ED25519");
         info.put("created", df.format(now));
         info.put("hwDeviceId", clientUUID.toString());
-        info.put("pubKey", Hex.decodeHex(clientKey.getRawPublicKey())); // will be changed to bytes
-        info.put("pubKeyId", Hex.decodeHex(clientKey.getRawPublicKey())); // will be changed to bytes
+        info.put("pubKey", Hex.encodeHexString(clientKey.getRawPublicKey())); // will be changed to bytes
+        info.put("pubKeyId", Hex.encodeHexString(clientKey.getRawPublicKey())); // will be changed to bytes
         info.put("validNotAfter", df.format(now + 31557600000L));
         info.put("validNotBefore", df.format(now));
 
