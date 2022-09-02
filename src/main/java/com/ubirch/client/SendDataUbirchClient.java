@@ -73,8 +73,9 @@ public class SendDataUbirchClient extends AbtractUbirchClient {
             }
 
             System.exit(0);
-        } else
+        } else {
             System.exit(-1);
+        }
     }
 
     private SendDataUbirchClient() {

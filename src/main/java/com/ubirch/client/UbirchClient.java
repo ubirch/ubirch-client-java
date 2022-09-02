@@ -39,7 +39,6 @@ public class UbirchClient extends AbtractUbirchClient {
         // ===== DECODE AND SET UP KEYS =========================================================
         // Keys should be created and stored in a KeyStore for optimal security
 
-
         Optional<PubKey> serverKey = createServerKey(serverKeyBytes);    // server public key for verification of responses
 
         Optional<PrivKey> clientKey = createClientKey(clientKeyBytes);   // client signing key for signing messages
@@ -89,8 +88,9 @@ public class UbirchClient extends AbtractUbirchClient {
             }
 
             System.exit(0);
-        } else
+        } else {
             System.exit(-1);
+        }
     }
 
     private UbirchClient() {

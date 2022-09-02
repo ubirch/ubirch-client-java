@@ -53,7 +53,7 @@ public class SimpleProtocolImpl extends Protocol {
      * key registration messages as JSON, which does not use the message hash as the base for the
      * signature operation, but signs the rendered json directly.
      *
-     * TODO: fix the key server to accept UPPv2 and remove this
+     * todo: fix the key server to accept UPPv2 and remove this
      */
     public byte[] sign(UUID uuid, byte[] data) throws SignatureException, InvalidKeyException {
         if (uuid.equals(clientUUID)) {

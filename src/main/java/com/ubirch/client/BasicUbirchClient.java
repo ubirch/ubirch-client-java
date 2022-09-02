@@ -57,7 +57,6 @@ public class BasicUbirchClient extends AbtractUbirchClient {
                 // this needs to be fixed, the json key reg requires the json to be signed w/o hashing
                 SimpleProtocolImpl protocol = new SimpleProtocolImpl(clientUUID, clientKey.get(), serverUUID, serverKey.get());
 
-
                 System.out.println("Registering public key ...");
                 registerClientPubKey(ENV, clientUUID, clientKey.get(), df, client, protocol);
 
@@ -66,7 +65,6 @@ public class BasicUbirchClient extends AbtractUbirchClient {
                 // create a new data value and send it
                 int temp = (int) (Math.random() * 10 + 10);
                 sendUPP(ENV, clientUUID, credentials, client, protocol, temp);
-
 
             } catch (ProtocolException | SignatureException | InvalidKeyException | NoSuchAlgorithmException e) {
                 e.printStackTrace();
@@ -78,8 +76,9 @@ public class BasicUbirchClient extends AbtractUbirchClient {
             }
 
             System.exit(0);
-        } else
+        } else {
             System.exit(-1);
+        }
     }
 
     private BasicUbirchClient() {
