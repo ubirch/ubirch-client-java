@@ -81,7 +81,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <ubirch-protocol.version>2.1.1</ubirch-protocol.version>
-        <ubirch-crypto.version>2.1.5-SNAPSHOT</ubirch-crypto.version>
+        <ubirch-crypto.version>2.1.5</ubirch-crypto.version>
 
         <!-- Logging -->
         <slf4j-api.version>1.7.25</slf4j-api.version>
